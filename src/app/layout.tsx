@@ -28,7 +28,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#1D1D1F] font-sans">
+      <body className="min-h-full flex flex-col bg-[#FAFAFA] text-[#1D1D1F] font-sans scroll-smooth">
         {children}
         <Toaster
           position="bottom-right"

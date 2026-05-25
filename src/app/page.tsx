@@ -1,30 +1,17 @@
-'use client';
+import { Hero } from '@/components/landing/hero';
+import { Features } from '@/components/landing/features';
+import { HowItWorks } from '@/components/landing/how-it-works';
+import { CtaSection } from '@/components/landing/cta-section';
+import { Footer } from '@/components/landing/footer';
 
-import { Navbar } from '@/components/navbar';
-import { LeftPanel } from '@/components/left-panel';
-import { RightPanel } from '@/components/right-panel';
-import { useResumeStore } from '@/lib/store';
-
-export default function Home() {
-  const lockInputs = useResumeStore((s) => s.lockInputs);
-  const setGenerating = useResumeStore((s) => s.setGenerating);
-
-  const handleGenerate = () => {
-    lockInputs();
-    setGenerating(true);
-  };
-
+export default function LandingPage() {
   return (
-    <div className="flex flex-col h-screen bg-[#FAFAFA] overflow-hidden">
-      <Navbar />
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-1/3 min-w-[380px] max-w-[460px] flex-shrink-0 border-r border-[#E5E5EA]">
-          <LeftPanel onGenerate={handleGenerate} />
-        </div>
-        <div className="flex-1">
-          <RightPanel />
-        </div>
-      </div>
+    <div className="min-h-screen bg-[#FAFAFA]">
+      <Hero />
+      <Features />
+      <HowItWorks />
+      <CtaSection />
+      <Footer />
     </div>
   );
 }

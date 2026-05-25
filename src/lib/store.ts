@@ -11,11 +11,13 @@ interface ResumeState {
   latexCode: string;
   hasLatex: boolean;
   isGenerating: boolean;
+  generateTrigger: number;
   setField: (field: keyof Pick<ResumeState, 'githubUrl' | 'linkedinUrl' | 'masterResume' | 'targetJd' | 'resumeFileName' | 'isParsing'>, value: string | boolean) => void;
   lockInputs: () => void;
   unlockInputs: () => void;
   setLatexCode: (code: string) => void;
   setGenerating: (v: boolean) => void;
+  startGeneration: () => void;
   reset: () => void;
 }
 
@@ -30,6 +32,7 @@ const initialState = {
   latexCode: '',
   hasLatex: false,
   isGenerating: false,
+  generateTrigger: 0,
 };
 
 export const useResumeStore = create<ResumeState>((set) => ({
@@ -39,5 +42,6 @@ export const useResumeStore = create<ResumeState>((set) => ({
   unlockInputs: () => set({ isLocked: false }),
   setLatexCode: (code) => set({ latexCode: code, hasLatex: true }),
   setGenerating: (v) => set({ isGenerating: v }),
+  startGeneration: () => set((s) => ({ isGenerating: true, generateTrigger: s.generateTrigger + 1 })),
   reset: () => set(initialState),
 }));

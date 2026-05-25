@@ -1,4 +1,4 @@
-import { streamText } from 'ai';
+import { streamText, convertToModelMessages } from 'ai';
 import { createOpenAI } from '@ai-sdk/openai';
 
 const groq = createOpenAI({
@@ -33,7 +33,8 @@ Jake's Resume template structure:
 
 export async function POST(req: Request) {
   try {
-    const { messages } = await req.json();
+    const { messages: uiMessages } = await req.json();
+    const messages = await convertToModelMessages(uiMessages);
 
     const result = streamText({
       model: groq('llama-3.3-70b-versatile'),
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
       maxOutputTokens: 8192,
     });
 
-    return result.toTextStreamResponse();
+    return result.toUIMessageStreamResponse();
   } catch (error) {
     console.error('API Error:', error);
     return new Response(JSON.stringify({ error: 'Failed to generate response' }), {

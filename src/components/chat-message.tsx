@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 interface ChatMessageProps {
   role: 'user' | 'assistant';
   content: string;
+  hideLatex?: boolean;
 }
 
 function extractLatexBlocks(content: string): Array<{ type: 'text' | 'latex'; content: string }> {
@@ -30,9 +31,12 @@ function extractLatexBlocks(content: string): Array<{ type: 'text' | 'latex'; co
   return blocks;
 }
 
-export function ChatMessage({ role, content }: ChatMessageProps) {
+export function ChatMessage({ role, content, hideLatex }: ChatMessageProps) {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const blocks = useMemo(() => extractLatexBlocks(content), [content]);
+  const blocks = useMemo(() => {
+    const raw = extractLatexBlocks(content);
+    return hideLatex ? raw.filter((b) => b.type === 'text') : raw;
+  }, [content, hideLatex]);
 
   const copyLatex = (latex: string, index: number) => {
     navigator.clipboard.writeText(latex);

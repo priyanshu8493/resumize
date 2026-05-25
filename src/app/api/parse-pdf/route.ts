@@ -6,43 +6,49 @@ export async function POST(req: NextRequest) {
     const file = formData.get('file') as File;
 
     if (!file) {
-      return new Response(JSON.stringify({ error: 'No file provided' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json({ error: 'No file provided' }, { status: 400 });
     }
 
     if (file.type !== 'application/pdf') {
-      return new Response(JSON.stringify({ error: 'Only PDF files are accepted' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return Response.json({ error: 'Only PDF files are accepted' }, { status: 400 });
     }
 
     const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
-    const pdfParse = require('pdf-parse');
-    const data = await pdfParse(buffer);
+    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
-    const text = data.text.trim();
+    const fs = await import('fs');
+    const path = await import('path');
+    const workerSrc = fs.readFileSync(
+      path.resolve('./node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'),
+      'utf-8'
+    );
+    const dataUri = 'data:application/javascript;base64,' + Buffer.from(workerSrc).toString('base64');
+    pdfjs.GlobalWorkerOptions.workerSrc = dataUri;
 
-    if (!text) {
-      return new Response(JSON.stringify({ error: 'Could not extract text from PDF. The file may be scanned or image-based.' }), {
-        status: 422,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    const data = new Uint8Array(arrayBuffer);
+    const doc = await pdfjs.getDocument({ data }).promise;
+    const pages: string[] = [];
+
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const text = content.items.map((item: any) => item.str).join(' ');
+      pages.push(text);
     }
 
-    return new Response(JSON.stringify({ text, pages: data.numpages }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const text = pages.join('\n\n').trim();
+
+    if (!text) {
+      return Response.json({
+        error: 'Could not extract text from this PDF. It may be a scanned document or image-based file.',
+      }, { status: 422 });
+    }
+
+    return Response.json({ text, pages: doc.numPages });
   } catch (error) {
     console.error('PDF Parse Error:', error);
-    return new Response(JSON.stringify({ error: 'Failed to parse PDF file' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const message = error instanceof Error ? error.message : 'Failed to parse PDF file';
+    return Response.json({ error: message }, { status: 500 });
   }
 }

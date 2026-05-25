@@ -13,11 +13,11 @@ interface LeftPanelProps {
 
 export function LeftPanel({ onGenerate }: LeftPanelProps) {
   const {
-    githubUrl, linkedinUrl, targetJd,
+    githubUrl, linkedinUrl, masterResume, targetJd,
     isLocked, isGenerating, setField,
   } = useResumeStore();
 
-  const canGenerate = true;
+  const canGenerate = masterResume.length > 0 && targetJd.length > 0;
 
   return (
     <div className="flex flex-col h-full bg-white">
