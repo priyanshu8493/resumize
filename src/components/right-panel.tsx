@@ -108,8 +108,9 @@ export function RightPanel() {
 
   const toggleChat = () => setChatOpen((v) => !v);
 
-  const showEmptyState = messages.length === 0 && !store.isGenerating;
-  const showGenerationLoading = store.isGenerating && messages.length === 0;
+  const hasTriggered = store.generateTrigger > 0 || messages.length > 0;
+  const showEmptyState = !hasTriggered;
+  const showGenerationLoading = hasTriggered && !store.hasLatex;
   const showPdfView = store.hasLatex;
 
   const displayMessages = messages.filter((m, i) => {
@@ -141,7 +142,7 @@ export function RightPanel() {
         </div>
       )}
 
-      {/* Loading animation */}
+      {/* Loading animation — covers ALL states before LaTeX is extracted */}
       {showGenerationLoading && (
         <div className="flex-1 flex items-center justify-center px-8">
           <div className="text-center space-y-8">
@@ -176,7 +177,7 @@ export function RightPanel() {
       {showPdfView && (
         <>
           <div className="flex-1 flex flex-col min-h-0 p-4 lg:p-5 pb-0">
-            <div className="flex-1 min-h-0 rounded-2xl border border-[#E5E5EA] overflow-hidden bg-white shadow-sm">
+            <div className="flex-1 min-h-0 rounded-2xl border border-[#E5E5EA] overflow-hidden bg-white shadow-sm animate-in fade-in duration-300">
               <div className="flex items-center justify-between px-4 py-2.5 bg-white border-b border-[#E5E5EA]">
                 <div className="flex items-center gap-2.5">
                   <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -311,28 +312,6 @@ export function RightPanel() {
             </div>
           </div>
         </>
-      )}
-
-      {/* Chat-only view (during initial conversation if no PDF yet) */}
-      {!showPdfView && !showEmptyState && !showGenerationLoading && (
-        <div className="flex-1 overflow-y-auto px-6 lg:px-10 py-8">
-          <div className="max-w-3xl mx-auto space-y-5">
-            {messages.map((m) => (
-              <ChatMessage
-                key={m.id}
-                role={m.role as 'user' | 'assistant'}
-                content={getMessageText(m)}
-              />
-            ))}
-            {isLoading && (
-              <div className="flex items-center gap-2 text-sm text-[#86868B] pl-11">
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                <span>AI is responding...</span>
-              </div>
-            )}
-            <div ref={chatBottomRef} />
-          </div>
-        </div>
       )}
     </div>
   );
