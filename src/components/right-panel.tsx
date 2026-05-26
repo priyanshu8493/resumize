@@ -5,7 +5,7 @@ import { useChat } from '@ai-sdk/react';
 import { Button } from '@/components/ui/button';
 import { ChatMessage } from './chat-message';
 import { PdfPreview } from './pdf-preview';
-import { useResumeStore } from '@/lib/store';
+import { useResumeStore, type Project, type Experience, type Achievement } from '@/lib/store';
 import {
   Send, Loader2, Download, ExternalLink, FileDown,
   Sparkles, X, Bot, PanelRightClose,
@@ -125,22 +125,50 @@ export function RightPanel() {
       return;
     }
 
-    const contextMessage = [
+    const fmtProject = (p: Project) =>
+      `  - ${p.title}${p.duration ? ` (${p.duration})` : ''}\n` +
+      `    Description: ${p.description}\n` +
+      `    Problem: ${p.problemStatement}\n` +
+      `    Tech Stack: ${p.techStack}${p.link ? `\n    Link: ${p.link}` : ''}`;
+
+    const fmtExperience = (e: Experience) =>
+      `  - ${e.role} at ${e.company} (${e.duration})\n` +
+      `    Description: ${e.description}\n` +
+      `    Achievements: ${e.achievements}`;
+
+    const fmtAchievement = (a: Achievement) =>
+      `  - [${a.type}] ${a.title}${a.issuer ? ` — ${a.issuer}` : ''}${a.date ? ` (${a.date})` : ''}\n` +
+      `    ${a.description}`;
+
+    const lines = [
       'Generate a tailored LaTeX resume for me based on the following information.',
       '',
       store.githubUrl ? `GitHub URL: ${store.githubUrl}` : '',
       store.linkedinUrl ? `LinkedIn URL: ${store.linkedinUrl}` : '',
       '',
-      '=== MASTER RESUME ===',
+      '=== MASTER RESUME TEXT ===',
       store.masterResume || '(No master resume provided)',
+    ];
+
+    if (store.projects.length > 0) {
+      lines.push('', '=== PROJECTS ===', ...store.projects.map(fmtProject));
+    }
+
+    if (store.experiences.length > 0) {
+      lines.push('', '=== EXPERIENCE ===', ...store.experiences.map(fmtExperience));
+    }
+
+    if (store.achievements.length > 0) {
+      lines.push('', '=== ACHIEVEMENTS & EDUCATION ===', ...store.achievements.map(fmtAchievement));
+    }
+
+    lines.push(
       '',
       '=== TARGET JOB DESCRIPTION ===',
       store.targetJd || '(No target job description provided)',
-    ]
-      .filter(Boolean)
-      .join('\n');
+    );
 
-    sendMessage({ text: contextMessage });
+    sendMessage({ text: lines.filter(Boolean).join('\n') });
   }, [store.generateTrigger]);
 
   useEffect(() => {
