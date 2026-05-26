@@ -42,6 +42,6 @@ export const useResumeStore = create<ResumeState>((set) => ({
   unlockInputs: () => set({ isLocked: false }),
   setLatexCode: (code) => set({ latexCode: code, hasLatex: true }),
   setGenerating: (v) => set({ isGenerating: v }),
-  startGeneration: () => set((s) => ({ isGenerating: true, generateTrigger: s.generateTrigger + 1 })),
+  startGeneration: () => set((s) => ({ isGenerating: true, isLocked: true, generateTrigger: s.generateTrigger + 1 })),
   reset: () => set(initialState),
 }));
