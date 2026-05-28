@@ -30,6 +30,27 @@ function extractLatexBlocks(content: string): Array<{ type: 'text' | 'latex'; co
   return blocks;
 }
 
+function formatInline(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  const regex = /\*\*(.*?)\*\*/g;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={match.index}>{match[1]}</strong>);
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
 export function ChatMessage({ role, content, hideLatex }: ChatMessageProps) {
   const { blocks, hasLatex } = useMemo(() => {
     const raw = extractLatexBlocks(content);
@@ -44,6 +65,19 @@ export function ChatMessage({ role, content, hideLatex }: ChatMessageProps) {
     return null;
   }
 
+  const renderedBlocks = blocks.map((block, idx) => (
+    <div
+      key={idx}
+      className={`${
+        role === 'user'
+          ? 'bg-[#0071E3] text-white rounded-2xl rounded-tr-sm'
+          : 'bg-white border border-[#E5E5EA] rounded-2xl rounded-tl-sm shadow-sm'
+      } px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap`}
+    >
+      {formatInline(block.content)}
+    </div>
+  ));
+
   return (
     <div className={`flex gap-3 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
       {role === 'assistant' && (
@@ -52,26 +86,8 @@ export function ChatMessage({ role, content, hideLatex }: ChatMessageProps) {
         </div>
       )}
 
-      <div className={`max-w-[85%] ${role === 'user' ? 'order-1' : 'order-2'}`}>
-        {role === 'user' ? (
-          <div className="bg-[#0071E3] text-white rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm leading-relaxed shadow-sm">
-            {content}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {blocks.length === 0 ? (
-              <div className="bg-white border border-[#E5E5EA] rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-[#1D1D1F] leading-relaxed whitespace-pre-wrap shadow-sm">
-                {content}
-              </div>
-            ) : (
-              blocks.map((block, idx) => (
-                <div key={idx} className="bg-white border border-[#E5E5EA] rounded-2xl rounded-tl-sm px-4 py-2.5 text-sm text-[#1D1D1F] leading-relaxed whitespace-pre-wrap shadow-sm">
-                  {block.content}
-                </div>
-              ))
-            )}
-          </div>
-        )}
+      <div className={`max-w-[85%] space-y-1.5 ${role === 'user' ? 'order-1' : 'order-2'}`}>
+        {renderedBlocks}
       </div>
 
       {role === 'user' && (

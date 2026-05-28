@@ -7,15 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { useResumeStore, type Project, type Experience, type Achievement } from '@/lib/store';
 import {
   Loader2, Sparkles, Code2, Briefcase, FileText,
-  ChevronDown, ChevronRight, FolderKanban, Building2, Award,
+  ChevronDown, FolderKanban, Building2, Award,
 } from 'lucide-react';
 import { FileUpload } from './file-upload';
 import { EntryForm } from './entry-form';
 import { EntryCard } from './entry-card';
-
-interface LeftPanelProps {
-  onGenerate: () => void;
-}
 
 function Section({
   title,
@@ -30,34 +26,39 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-[#F5F5F7] rounded-xl overflow-hidden">
+    <div className="bg-[#F5F5F7] rounded-xl overflow-hidden transition-shadow hover:shadow-sm">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#EFEFF1] transition-colors"
+        className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[#EFEFF1] transition-colors active:bg-[#E8E8ED]"
       >
         <div className="flex items-center gap-2">
-          <span className="text-[#6E6E73]">{icon}</span>
+          <span className={`transition-colors ${open ? 'text-[#0071E3]' : 'text-[#6E6E73]'}`}>{icon}</span>
           <span className="text-xs font-semibold text-[#1D1D1F]">{title}</span>
         </div>
-        {open ? (
+        <div className={`transition-transform duration-200 ${open ? 'rotate-0' : '-rotate-90'}`}>
           <ChevronDown className="w-3.5 h-3.5 text-[#86868B]" />
-        ) : (
-          <ChevronRight className="w-3.5 h-3.5 text-[#86868B]" />
-        )}
+        </div>
       </button>
-      {open && <div className="px-4 pb-4 space-y-3">{children}</div>}
+      <div
+        className={`transition-all duration-200 ease-out overflow-hidden ${
+          open ? 'max-h-[2000px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
+        <div className="px-4 pb-4 space-y-3">{children}</div>
+      </div>
     </div>
   );
 }
 
-export function LeftPanel({ onGenerate }: LeftPanelProps) {
+export function LeftPanel() {
   const {
-    githubUrl, linkedinUrl, targetJd,
+    githubUrl, linkedinUrl, masterResume, targetJd,
     projects, experiences, achievements,
     isLocked, isGenerating, setField,
-    addProject, removeProject,
-    addExperience, removeExperience,
-    addAchievement, removeAchievement,
+    addProject, removeProject, updateProject,
+    addExperience, removeExperience, updateExperience,
+    addAchievement, removeAchievement, updateAchievement,
+    startGeneration,
   } = useResumeStore();
 
 
@@ -99,13 +100,36 @@ export function LeftPanel({ onGenerate }: LeftPanelProps) {
     addAchievement(a);
   };
 
+  const checks = [
+    githubUrl, linkedinUrl,
+    masterResume,
+    targetJd,
+    projects.length > 0,
+    experiences.length > 0,
+    achievements.length > 0,
+  ];
+  const filledFields = checks.filter(Boolean).length;
+  const totalFields = checks.length;
+  const progress = Math.min(filledFields / totalFields, 1);
+
   return (
     <div className="flex flex-col h-full bg-white">
       <div className="flex-1 overflow-y-auto p-5 lg:p-6 space-y-4">
-        <div className="space-y-1 mb-1">
-          <h2 className="text-xs font-semibold text-[#86868B] tracking-[0.05em] uppercase">
-            Context Engine
-          </h2>
+        <div className="space-y-2 mb-1">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-semibold text-[#86868B] tracking-[0.05em] uppercase">
+              Your Profile
+            </h2>
+            <div className="flex items-center gap-1.5">
+              <div className="w-16 h-1.5 bg-[#E5E5EA] rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#0071E3] to-[#40A9FF] rounded-full transition-all duration-500"
+                  style={{ width: `${progress * 100}%` }}
+                />
+              </div>
+              <span className="text-[10px] font-medium text-[#86868B] tabular-nums">{filledFields}/{totalFields}</span>
+            </div>
+          </div>
           <p className="text-sm text-[#86868B] leading-relaxed">
             Load up your profile so the AI can tailor your resume.
           </p>
@@ -147,63 +171,63 @@ export function LeftPanel({ onGenerate }: LeftPanelProps) {
           {projects.length > 0 && (
             <div className="space-y-2">
               {projects.map((p) => (
-                <EntryCard
-                  key={p.id}
-                  entry={p}
-                  type="project"
-                  onDelete={removeProject}
-                  onEdit={() => {}}
-                  isLocked={isLocked}
-                />
-              ))}
-            </div>
-          )}
-          {!isLocked && (
-            <EntryForm type="project" onSave={handleAddProject} />
-          )}
-        </Section>
+                  <EntryCard
+                    key={p.id}
+                    entry={p}
+                    type="project"
+                    onDelete={removeProject}
+                    onEdit={updateProject}
+                    isLocked={isLocked}
+                  />
+                ))}
+              </div>
+            )}
+            {!isLocked && (
+              <EntryForm type="project" onSave={handleAddProject} />
+            )}
+          </Section>
 
-        {/* Experience */}
-        <Section title="Experience" icon={<Building2 className="w-3.5 h-3.5" />} defaultOpen={experiences.length > 0}>
-          {experiences.length > 0 && (
-            <div className="space-y-2">
-              {experiences.map((e) => (
-                <EntryCard
-                  key={e.id}
-                  entry={e}
-                  type="experience"
-                  onDelete={removeExperience}
-                  onEdit={() => {}}
-                  isLocked={isLocked}
-                />
-              ))}
-            </div>
-          )}
-          {!isLocked && (
-            <EntryForm type="experience" onSave={handleAddExperience} />
-          )}
-        </Section>
+          {/* Experience */}
+          <Section title="Experience" icon={<Building2 className="w-3.5 h-3.5" />} defaultOpen={experiences.length > 0}>
+            {experiences.length > 0 && (
+              <div className="space-y-2">
+                {experiences.map((e) => (
+                  <EntryCard
+                    key={e.id}
+                    entry={e}
+                    type="experience"
+                    onDelete={removeExperience}
+                    onEdit={updateExperience}
+                    isLocked={isLocked}
+                  />
+                ))}
+              </div>
+            )}
+            {!isLocked && (
+              <EntryForm type="experience" onSave={handleAddExperience} />
+            )}
+          </Section>
 
-        {/* Achievements & Education */}
-        <Section title="Education & Achievements" icon={<Award className="w-3.5 h-3.5" />} defaultOpen={achievements.length > 0}>
-          {achievements.length > 0 && (
-            <div className="space-y-2">
-              {achievements.map((a) => (
-                <EntryCard
-                  key={a.id}
-                  entry={a}
-                  type="achievement"
-                  onDelete={removeAchievement}
-                  onEdit={() => {}}
-                  isLocked={isLocked}
-                />
-              ))}
-            </div>
-          )}
-          {!isLocked && (
-            <EntryForm type="achievement" onSave={handleAddAchievement} />
-          )}
-        </Section>
+          {/* Achievements & Education */}
+          <Section title="Education & Achievements" icon={<Award className="w-3.5 h-3.5" />} defaultOpen={achievements.length > 0}>
+            {achievements.length > 0 && (
+              <div className="space-y-2">
+                {achievements.map((a) => (
+                  <EntryCard
+                    key={a.id}
+                    entry={a}
+                    type="achievement"
+                    onDelete={removeAchievement}
+                    onEdit={updateAchievement}
+                    isLocked={isLocked}
+                  />
+                ))}
+              </div>
+            )}
+            {!isLocked && (
+              <EntryForm type="achievement" onSave={handleAddAchievement} />
+            )}
+          </Section>
 
         {/* Target Job Description */}
         <Section title="Target Job" icon={<Briefcase className="w-3.5 h-3.5" />}>
@@ -219,7 +243,7 @@ export function LeftPanel({ onGenerate }: LeftPanelProps) {
 
       <div className="p-5 lg:p-6 border-t border-[#E5E5EA] bg-white">
         <Button
-          onClick={onGenerate}
+          onClick={startGeneration}
           disabled={isLocked || isGenerating}
           className="w-full h-11 bg-gradient-to-br from-[#0071E3] to-[#40A9FF] hover:from-[#0077ED] hover:to-[#45ADFF] text-white font-medium text-sm shadow-lg shadow-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all duration-200 rounded-xl"
         >

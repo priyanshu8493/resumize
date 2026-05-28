@@ -8,7 +8,7 @@ import { PdfPreview } from './pdf-preview';
 import { useResumeStore, type Project, type Experience, type Achievement } from '@/lib/store';
 import {
   Send, Loader2, Download, ExternalLink, FileDown,
-  Sparkles, X, Bot, PanelRightClose,
+  Sparkles, X, Bot, MessageSquare,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -242,7 +242,7 @@ export function RightPanel() {
   });
 
   const chatPanel = (
-    <div className="w-[380px] flex-shrink-0 border-r border-[#E5E5EA] bg-white flex flex-col animate-in slide-in-from-left duration-200">
+    <div className="w-[380px] flex-shrink-0 border-l border-[#E5E5EA] bg-white flex flex-col animate-in slide-in-from-right duration-200">
       <div className="flex items-center justify-between px-5 py-3 border-b border-[#E5E5EA]">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-full bg-gradient-to-br from-[#0071E3] to-[#40A9FF] flex items-center justify-center shadow-sm">
@@ -258,7 +258,7 @@ export function RightPanel() {
           className="h-7 w-7 rounded-lg hover:bg-[#F5F5F7] flex items-center justify-center text-[#86868B] hover:text-[#1D1D1F] transition-colors"
           title="Close chat"
         >
-          <PanelRightClose className="w-4 h-4" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
@@ -330,14 +330,13 @@ export function RightPanel() {
 
   return (
     <div className="flex flex-col h-full bg-[#FAFAFA] relative">
-      {/* Celebration overlay */}
       {showCelebration && <CelebrationDots />}
 
       {/* Empty state */}
       {showEmptyState && (
         <div className="flex-1 flex items-center justify-center px-8">
           <div className="text-center max-w-sm animate-in fade-in duration-500">
-            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#E8F0FE] to-[#D0E4FF] flex items-center justify-center mx-auto mb-8 shadow-sm group-hover:scale-105 transition-transform">
+            <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-[#E8F0FE] to-[#D0E4FF] flex items-center justify-center mx-auto mb-8 shadow-sm transition-transform hover:scale-105 cursor-default">
               <FileDown className="w-9 h-9 text-[#0071E3]" />
             </div>
             <h2 className="text-[22px] font-semibold text-[#1D1D1F] mb-3 tracking-tight">
@@ -347,17 +346,23 @@ export function RightPanel() {
               Drop in your resume and the job description, then{' '}
               <span className="text-[#0071E3] font-medium">generate</span> a tailored resume designed to land the interview.
             </p>
-            <div className="mt-8 flex justify-center gap-2">
-              <div className="flex -space-x-1.5">
-                {['#FF5F57', '#FEBC2E', '#28C840', '#0071E3', '#AF52DE'].map((c, i) => (
-                  <div
-                    key={i}
-                    className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
+            <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1.5">
+                  {['#FF5F57', '#FEBC2E', '#28C840', '#0071E3', '#AF52DE'].map((c, i) => (
+                    <div
+                      key={i}
+                      className="w-3 h-3 rounded-full border-2 border-white shadow-sm"
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                <span className="text-xs text-[#A1A1A6] font-medium">ATS-friendly · One page · LaTeX</span>
               </div>
-              <span className="text-xs text-[#A1A1A6] font-medium">ATS-friendly · One page · LaTeX</span>
+              <div className="flex items-center gap-1.5 text-xs text-[#86868B] bg-[#F5F5F7] px-3 py-1.5 rounded-full">
+                <MessageSquare className="w-3 h-3" />
+                Chat with AI to refine after generation
+              </div>
             </div>
           </div>
         </div>
@@ -384,7 +389,10 @@ export function RightPanel() {
             </div>
             <div className="w-64 mx-auto">
               <div className="h-1.5 bg-[#E5E5EA] rounded-full overflow-hidden">
-                <div className="h-full bg-gradient-to-r from-[#0071E3] to-[#40A9FF] rounded-full animate-pulse" style={{ width: '60%' }} />
+                <div
+                  className="h-full bg-gradient-to-r from-[#0071E3] to-[#40A9FF] rounded-full animate-pulse"
+                  style={{ width: '60%' }}
+                />
               </div>
             </div>
           </div>
@@ -393,9 +401,7 @@ export function RightPanel() {
 
       {/* PDF Preview view */}
       {showPdfView && (
-        <div className="flex-1 flex min-h-0">
-          {chatOpen && chatPanel}
-
+        <div className="flex-1 flex min-h-0 flex-row-reverse">
           <div className="flex-1 flex flex-col min-h-0">
             <div className="flex items-center justify-between px-5 py-3 border-b border-[#E5E5EA] bg-white/80 backdrop-blur-sm">
               <div className="flex items-center gap-3">
@@ -452,6 +458,7 @@ export function RightPanel() {
               </div>
             </div>
           </div>
+          {chatOpen && chatPanel}
         </div>
       )}
     </div>

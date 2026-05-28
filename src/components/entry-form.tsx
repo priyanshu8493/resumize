@@ -58,23 +58,29 @@ const INITIAL_VALUES: Record<EntryType, Record<string, string>> = {
 interface EntryFormProps {
   type: EntryType;
   onSave: (values: Record<string, string>) => void;
+  initialValues?: Record<string, string>;
 }
 
-export function EntryForm({ type, onSave }: EntryFormProps) {
+export function EntryForm({ type, onSave, initialValues }: EntryFormProps) {
   const [open, setOpen] = useState(false);
-  const [values, setValues] = useState<Record<string, string>>(INITIAL_VALUES[type]);
+  const [values, setValues] = useState<Record<string, string>>(initialValues ?? INITIAL_VALUES[type]);
 
   const fields = FIELDS[type];
+  const isEditing = !!initialValues;
 
   const handleSave = () => {
     onSave(values);
-    setValues(INITIAL_VALUES[type]);
-    setOpen(false);
+    if (!isEditing) {
+      setValues(INITIAL_VALUES[type]);
+      setOpen(false);
+    }
   };
 
   const handleCancel = () => {
-    setValues(INITIAL_VALUES[type]);
-    setOpen(false);
+    if (!isEditing) {
+      setValues(INITIAL_VALUES[type]);
+      setOpen(false);
+    }
   };
 
   const set = (key: string, value: string) => setValues((v) => ({ ...v, [key]: value }));
@@ -88,6 +94,63 @@ export function EntryForm({ type, onSave }: EntryFormProps) {
 
   const dialogTitle =
     type === 'project' ? 'Add Project' : type === 'experience' ? 'Add Experience' : 'Add Achievement';
+
+  if (isEditing) {
+    return (
+      <div className="space-y-3">
+        <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+          {fields.map((field) => (
+            <div key={field.key} className="space-y-1">
+              <label className="text-[11px] font-medium text-[#6E6E73]">{field.label}</label>
+              {field.type === 'textarea' ? (
+                <Textarea
+                  value={values[field.key] ?? ''}
+                  onChange={(e) => set(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className="min-h-[70px] text-sm bg-[#F5F5F7] border-[#D1D1D6]"
+                />
+              ) : field.type === 'select' ? (
+                <select
+                  value={values[field.key] ?? ''}
+                  onChange={(e) => set(field.key, e.target.value)}
+                  className="w-full h-9 rounded-lg border border-[#D1D1D6] bg-[#F5F5F7] px-2.5 text-sm text-[#1D1D1F] focus:outline-none focus:ring-2 focus:ring-[#0071E3]/30 focus:border-[#0071E3] transition-all"
+                >
+                  {field.options?.map((o) => (
+                    <option key={o.value} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              ) : (
+                <Input
+                  value={values[field.key] ?? ''}
+                  onChange={(e) => set(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className="h-9 text-sm bg-[#F5F5F7] border-[#D1D1D6]"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleCancel}
+            className="text-xs"
+          >
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            onClick={handleSave}
+            disabled={!isValid}
+            className="text-xs"
+          >
+            Save Changes
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   if (!open) {
     return (
