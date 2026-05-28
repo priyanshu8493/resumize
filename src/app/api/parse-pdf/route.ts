@@ -17,15 +17,6 @@ export async function POST(req: NextRequest) {
 
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
 
-    const fs = await import('fs');
-    const path = await import('path');
-    const workerSrc = fs.readFileSync(
-      path.resolve('./node_modules/pdfjs-dist/legacy/build/pdf.worker.min.mjs'),
-      'utf-8'
-    );
-    const dataUri = 'data:application/javascript;base64,' + Buffer.from(workerSrc).toString('base64');
-    pdfjs.GlobalWorkerOptions.workerSrc = dataUri;
-
     const data = new Uint8Array(arrayBuffer);
     const doc = await pdfjs.getDocument({ data }).promise;
     const pages: string[] = [];
@@ -33,7 +24,7 @@ export async function POST(req: NextRequest) {
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
-      const text = content.items.map((item: any) => item.str).join(' ');
+      const text = content.items.map((item: { str?: string }) => item.str ?? '').join(' ');
       pages.push(text);
     }
 
