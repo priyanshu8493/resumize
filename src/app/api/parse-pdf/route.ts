@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { extractText, getDocumentProxy } from 'unpdf';
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,33 +14,17 @@ export async function POST(req: NextRequest) {
       return Response.json({ error: 'Only PDF files are accepted' }, { status: 400 });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
+    const buffer = await file.arrayBuffer();
+    const pdf = await getDocumentProxy(new Uint8Array(buffer));
+    const { totalPages, text } = await extractText(pdf, { mergePages: true });
 
-    const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-
-    const data = new Uint8Array(arrayBuffer);
-    const doc = await pdfjs.getDocument({ data }).promise;
-    const pages: string[] = [];
-
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const content = await page.getTextContent();
-      const text = content.items
-        .filter((item) => 'str' in item)
-        .map((item) => (item as { str: string }).str)
-        .join(' ');
-      pages.push(text);
-    }
-
-    const text = pages.join('\n\n').trim();
-
-    if (!text) {
+    if (!text.trim()) {
       return Response.json({
         error: 'Could not extract text from this PDF. It may be a scanned document or image-based file.',
       }, { status: 422 });
     }
 
-    return Response.json({ text, pages: doc.numPages });
+    return Response.json({ text, pages: totalPages });
   } catch (error) {
     console.error('PDF Parse Error:', error);
     const message = error instanceof Error ? error.message : 'Failed to parse PDF file';
