@@ -4,14 +4,17 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useResumeStore, type Project, type Experience, type Achievement } from '@/lib/store';
+import { useResumeStore, type Project, type Experience, type Achievement, type Skill, type TemplateType } from '@/lib/store';
+import { TEMPLATES } from '@/lib/templates';
 import {
   Loader2, Sparkles, Code2, Briefcase, FileText,
   ChevronDown, FolderKanban, Building2, Award,
+  UserRound, Wrench, Plus, X, Palette,
 } from 'lucide-react';
 import { FileUpload } from './file-upload';
 import { EntryForm } from './entry-form';
 import { EntryCard } from './entry-card';
+import { cn } from '@/lib/utils';
 
 function Section({
   title,
@@ -50,9 +53,101 @@ function Section({
   );
 }
 
+function SkillsManager() {
+  const { skills, isLocked, addSkill, removeSkill } = useResumeStore();
+  const [newCategory, setNewCategory] = useState('');
+  const [newItems, setNewItems] = useState('');
+
+  const handleAdd = () => {
+    if (!newCategory.trim() || !newItems.trim()) return;
+    const s: Skill = {
+      id: crypto.randomUUID(),
+      category: newCategory.trim(),
+      items: newItems.trim(),
+    };
+    addSkill(s);
+    setNewCategory('');
+    setNewItems('');
+  };
+
+  return (
+    <div className="space-y-2">
+      {skills.map((s) => (
+        <div key={s.id} className="flex items-start gap-2 bg-white border border-[#E5E5EA] rounded-xl p-3 group">
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-[#0071E3] uppercase tracking-wide">{s.category}</p>
+            <p className="text-sm text-[#1D1D1F] mt-0.5">{s.items}</p>
+          </div>
+          {!isLocked && (
+            <button
+              onClick={() => removeSkill(s.id)}
+              className="shrink-0 h-7 w-7 rounded-lg hover:bg-red-50 flex items-center justify-center text-[#A1A1A6] hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ))}
+      {!isLocked && (
+        <div className="flex gap-2">
+          <div className="flex-1 space-y-1.5">
+            <Input
+              placeholder="Category (e.g. Languages)"
+              value={newCategory}
+              onChange={(e) => setNewCategory(e.target.value)}
+              className="h-9 text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6]"
+            />
+            <Input
+              placeholder="Skills (e.g. Python, TypeScript, Go)"
+              value={newItems}
+              onChange={(e) => setNewItems(e.target.value)}
+              className="h-9 text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6]"
+            />
+          </div>
+          <button
+            onClick={handleAdd}
+            disabled={!newCategory.trim() || !newItems.trim()}
+            className="self-end h-9 w-9 rounded-xl bg-[#0071E3] hover:bg-[#0077ED] text-white disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center shrink-0 transition-all"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TemplateSelector() {
+  const { selectedTemplate, isLocked, setField } = useResumeStore();
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {(Object.entries(TEMPLATES) as [TemplateType, typeof TEMPLATES['modern']][]).map(([key, tpl]) => (
+        <button
+          key={key}
+          onClick={() => !isLocked && setField('selectedTemplate', key)}
+          disabled={isLocked}
+          className={cn(
+            'flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-center',
+            selectedTemplate === key
+              ? 'border-[#0071E3] bg-[#E8F0FE]'
+              : 'border-[#D1D1D6] bg-white hover:border-[#0071E3]/50',
+            isLocked && 'opacity-40 cursor-not-allowed',
+          )}
+        >
+          <Palette className="w-4 h-4" style={{ color: tpl.color }} />
+          <span className="text-[11px] font-semibold text-[#1D1D1F]">{tpl.label}</span>
+          <span className="text-[9px] text-[#86868B] leading-tight">{tpl.description}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function LeftPanel() {
   const {
     githubUrl, linkedinUrl, masterResume, targetJd,
+    targetRole, targetCompany, professionalSummary,
     projects, experiences, achievements,
     isLocked, isGenerating, setField,
     addProject, removeProject, updateProject,
@@ -60,8 +155,6 @@ export function LeftPanel() {
     addAchievement, removeAchievement, updateAchievement,
     startGeneration,
   } = useResumeStore();
-
-
 
   const handleAddProject = (vals: Record<string, string>) => {
     const p: Project = {
@@ -104,9 +197,11 @@ export function LeftPanel() {
     githubUrl, linkedinUrl,
     masterResume,
     targetJd,
+    targetRole,
     projects.length > 0,
     experiences.length > 0,
     achievements.length > 0,
+    professionalSummary,
   ];
   const filledFields = checks.filter(Boolean).length;
   const totalFields = checks.length;
@@ -164,6 +259,22 @@ export function LeftPanel() {
         {/* Resume Upload */}
         <Section title="Master Resume" icon={<FileText className="w-3.5 h-3.5" />}>
           <FileUpload />
+        </Section>
+
+        {/* Professional Summary */}
+        <Section title="Professional Summary" icon={<UserRound className="w-3.5 h-3.5" />}>
+          <Textarea
+            placeholder="e.g. Software engineer with 5+ years of experience building scalable web applications..."
+            value={professionalSummary}
+            onChange={(e) => setField('professionalSummary', e.target.value)}
+            disabled={isLocked}
+            className="min-h-[100px] text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6] focus-visible:ring-[#0071E3] focus-visible:border-[#0071E3] resize-none"
+          />
+        </Section>
+
+        {/* Skills */}
+        <Section title="Skills" icon={<Wrench className="w-3.5 h-3.5" />}>
+          <SkillsManager />
         </Section>
 
         {/* Projects */}
@@ -231,17 +342,47 @@ export function LeftPanel() {
 
         {/* Target Job Description */}
         <Section title="Target Job" icon={<Briefcase className="w-3.5 h-3.5" />}>
-          <Textarea
-            placeholder="Paste the full job description here..."
-            value={targetJd}
-            onChange={(e) => setField('targetJd', e.target.value)}
-            disabled={isLocked}
-            className="min-h-[140px] text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6] focus-visible:ring-[#0071E3] focus-visible:border-[#0071E3] resize-none"
-          />
+          <div className="space-y-2.5">
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-[#6E6E73]">Target Role</label>
+              <Input
+                placeholder="e.g. Senior Software Engineer"
+                value={targetRole}
+                onChange={(e) => setField('targetRole', e.target.value)}
+                disabled={isLocked}
+                className="h-9 text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6] focus-visible:ring-[#0071E3] focus-visible:border-[#0071E3]"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-[#6E6E73]">Target Company</label>
+              <Input
+                placeholder="e.g. Google"
+                value={targetCompany}
+                onChange={(e) => setField('targetCompany', e.target.value)}
+                disabled={isLocked}
+                className="h-9 text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6] focus-visible:ring-[#0071E3] focus-visible:border-[#0071E3]"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[11px] font-medium text-[#6E6E73]">Job Description</label>
+              <Textarea
+                placeholder="Paste the full job description here..."
+                value={targetJd}
+                onChange={(e) => setField('targetJd', e.target.value)}
+                disabled={isLocked}
+                className="min-h-[120px] text-sm bg-white border-[#D1D1D6] text-[#1D1D1F] placeholder:text-[#A1A1A6] focus-visible:ring-[#0071E3] focus-visible:border-[#0071E3] resize-none"
+              />
+            </div>
+          </div>
+        </Section>
+
+        {/* Template Selector */}
+        <Section title="Resume Template" icon={<Palette className="w-3.5 h-3.5" />}>
+          <TemplateSelector />
         </Section>
       </div>
 
-      <div className="p-5 lg:p-6 border-t border-[#E5E5EA] bg-white">
+      <div className="p-5 lg:p-6 border-t border-[#E5E5EA] bg-white space-y-2">
         <Button
           onClick={startGeneration}
           disabled={isLocked || isGenerating}

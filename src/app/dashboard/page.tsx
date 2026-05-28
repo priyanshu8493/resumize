@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Navbar } from '@/components/navbar';
 import { LeftPanel } from '@/components/left-panel';
 import { RightPanel } from '@/components/right-panel';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 
 export default function DashboardPage() {
   const [leftOpen, setLeftOpen] = useState(true);

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useResumeStore } from '@/lib/store';
-import { Loader2, AlertCircle, FileText, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import { Loader2, AlertCircle, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
 
 export function PdfPreview() {
   const latexCode = useResumeStore((s) => s.latexCode);
@@ -12,16 +12,22 @@ export function PdfPreview() {
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1.2);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfDocRef = useRef<any>(null);
+  const cancelledRef = useRef(false);
+
+  const fetchIdRef = useRef(0);
 
   useEffect(() => {
     if (!latexCode) return;
-    let cancelled = false;
+    const currentId = ++fetchIdRef.current;
+    cancelledRef.current = false;
+    pdfDocRef.current = null;
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState('compiling');
     setError(null);
     setPageNumber(1);
-    pdfDocRef.current = null;
 
     fetch('/api/compile-latex', {
       method: 'POST',
@@ -29,40 +35,43 @@ export function PdfPreview() {
       body: JSON.stringify({ latex: latexCode }),
     })
       .then(async (res) => {
+        if (cancelledRef.current || fetchIdRef.current !== currentId) return null;
         if (!res.ok) {
           const body = await res.json().catch(() => ({}));
           throw new Error(body.error || 'Compilation failed');
         }
         const blob = await res.blob();
-        if (cancelled) return;
+        if (cancelledRef.current || fetchIdRef.current !== currentId) return null;
         if (blob.size === 0) throw new Error('Empty PDF');
-
+        return blob;
+      })
+      .then(async (blob) => {
+        if (!blob || cancelledRef.current || fetchIdRef.current !== currentId) return;
         setState('loading');
 
         const pdfjs = await import('pdfjs-dist');
         pdfjs.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
         const arrayBuffer = await blob.arrayBuffer();
-        if (cancelled) return;
+        if (cancelledRef.current || fetchIdRef.current !== currentId) return;
         const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
-        if (cancelled) return;
+        if (cancelledRef.current || fetchIdRef.current !== currentId) return;
         pdfDocRef.current = pdf;
         setNumPages(pdf.numPages);
         setState('ready');
       })
       .catch((err) => {
-        if (cancelled) return;
+        if (cancelledRef.current || fetchIdRef.current !== currentId) return;
         setError(err.message || 'Failed to load PDF');
         setState('error');
       });
 
-    return () => { cancelled = true; };
+    return () => { cancelledRef.current = true; };
   }, [latexCode]);
 
   useEffect(() => {
     if (state !== 'ready' || !canvasRef.current) return;
-    let cancelled = false;
 
     const renderPage = async () => {
       const pdf = pdfDocRef.current;
@@ -81,8 +90,6 @@ export function PdfPreview() {
     };
 
     renderPage();
-
-    return () => { cancelled = true; };
   }, [state, pageNumber, scale]);
 
   const goPrev = useCallback(() => setPageNumber((p) => Math.max(1, p - 1)), []);

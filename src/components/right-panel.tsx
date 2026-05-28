@@ -1,14 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 import { Button } from '@/components/ui/button';
 import { ChatMessage } from './chat-message';
 import { PdfPreview } from './pdf-preview';
-import { useResumeStore, type Project, type Experience, type Achievement } from '@/lib/store';
+import { useResumeStore, type Project, type Experience, type Achievement, type Skill } from '@/lib/store';
+import { TEMPLATES } from '@/lib/templates';
 import {
   Send, Loader2, Download, ExternalLink, FileDown,
-  Sparkles, X, Bot, MessageSquare,
+  Sparkles, X, Bot, MessageSquare, Plus, Layers,
+  Check, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -30,10 +33,13 @@ const getMessageText = (
 };
 
 const LOADING_MESSAGES = [
-  'Analyzing your background and the target role...',
-  'Matching skills to job requirements...',
-  'Optimizing bullet points for impact...',
+  'Analyzing job description for key requirements...',
+  'Matching your skills to role requirements...',
+  'Rewriting bullet points in X-Y-Z format...',
+  'Quantifying your achievements with metrics...',
+  'Optimizing keyword density for ATS parsing...',
   'Formatting with LaTeX precision...',
+  'Prioritizing content by relevance to the role...',
   'Almost there, adding final touches...',
 ];
 
@@ -83,6 +89,50 @@ function CelebrationDots() {
   );
 }
 
+function VersionBar() {
+  const { resumeVersions, currentVersionId, addResumeVersion, switchResumeVersion, deleteResumeVersion, isLocked, hasLatex } = useResumeStore();
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2 bg-[#FAFAFA] border-b border-[#E5E5EA]">
+      <Layers className="w-3.5 h-3.5 text-[#86868B]" />
+      <span className="text-[11px] font-medium text-[#86868B] mr-1">Versions</span>
+      <div className="flex items-center gap-1 flex-1 overflow-x-auto">
+        {resumeVersions.map((v) => (
+          <button
+            key={v.id}
+            onClick={() => switchResumeVersion(v.id)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium whitespace-nowrap transition-all ${
+              currentVersionId === v.id
+                ? 'bg-[#0071E3] text-white shadow-sm'
+                : 'bg-white border border-[#D1D1D6] text-[#6E6E73] hover:border-[#0071E3] hover:text-[#0071E3]'
+            }`}
+          >
+            {currentVersionId === v.id && <Check className="w-3 h-3" />}
+            {v.label}
+            {resumeVersions.length > 1 && (
+              <span
+                onClick={(e) => { e.stopPropagation(); deleteResumeVersion(v.id); }}
+                className="ml-0.5 hover:opacity-60"
+              >
+                <Trash2 className="w-2.5 h-2.5" />
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+      {!isLocked && hasLatex && (
+        <button
+          onClick={() => addResumeVersion()}
+          className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-white border border-dashed border-[#D1D1D6] text-[#6E6E73] hover:border-[#0071E3] hover:text-[#0071E3] transition-all"
+        >
+          <Plus className="w-3 h-3" />
+          Save
+        </button>
+      )}
+    </div>
+  );
+}
+
 export function RightPanel() {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState('');
@@ -92,7 +142,15 @@ export function RightPanel() {
 
   const store = useResumeStore();
 
+  const transport = useMemo(
+    () => new DefaultChatTransport({
+      body: { template: store.selectedTemplate },
+    }),
+    [store.selectedTemplate],
+  );
+
   const { messages, sendMessage, status } = useChat({
+    transport,
     onFinish: ({
       message,
     }: {
@@ -103,6 +161,7 @@ export function RightPanel() {
       const latex = extractLatex(text);
       if (latex) {
         store.setLatexCode(latex);
+        store.addResumeVersion('Initial');
       }
     },
     onError: () => {
@@ -140,15 +199,32 @@ export function RightPanel() {
       `  - [${a.type}] ${a.title}${a.issuer ? ` — ${a.issuer}` : ''}${a.date ? ` (${a.date})` : ''}\n` +
       `    ${a.description}`;
 
+    const fmtSkill = (s: Skill) =>
+      `  - ${s.category}: ${s.items}`;
+
     const lines = [
       'Generate a tailored LaTeX resume for me based on the following information.',
       '',
       store.githubUrl ? `GitHub URL: ${store.githubUrl}` : '',
       store.linkedinUrl ? `LinkedIn URL: ${store.linkedinUrl}` : '',
       '',
-      '=== MASTER RESUME TEXT ===',
-      store.masterResume || '(No master resume provided)',
+      `=== TARGET ROLE ===`,
+      store.targetRole || '(Not specified)',
+      '',
+      `=== TARGET COMPANY ===`,
+      store.targetCompany || '(Not specified)',
+      '',
     ];
+
+    if (store.professionalSummary) {
+      lines.push('', '=== PROFESSIONAL SUMMARY ===', store.professionalSummary);
+    }
+
+    lines.push('', '=== MASTER RESUME TEXT ===', store.masterResume || '(No master resume provided)');
+
+    if (store.skills.length > 0) {
+      lines.push('', '=== SKILLS ===', ...store.skills.map(fmtSkill));
+    }
 
     if (store.projects.length > 0) {
       lines.push('', '=== PROJECTS ===', ...store.projects.map(fmtProject));
@@ -168,7 +244,14 @@ export function RightPanel() {
       store.targetJd || '(No target job description provided)',
     );
 
+    lines.push(
+      '',
+      '=== TEMPLATE PREFERENCE ===',
+      `Use the "${TEMPLATES[store.selectedTemplate].label}" template.`,
+    );
+
     sendMessage({ text: lines.filter(Boolean).join('\n') });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [store.generateTrigger]);
 
   useEffect(() => {
@@ -410,7 +493,7 @@ export function RightPanel() {
                   <span className="text-sm font-semibold text-[#1D1D1F]">Resume</span>
                 </div>
                 <span className="text-xs text-[#A1A1A6] font-mono bg-[#F5F5F7] px-2 py-0.5 rounded-md font-medium">
-                  PDF
+                  {TEMPLATES[store.selectedTemplate].label}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -451,6 +534,8 @@ export function RightPanel() {
                 </button>
               </div>
             </div>
+
+            <VersionBar />
 
             <div className="flex-1 min-h-0 p-5">
               <div className="h-full rounded-2xl border border-[#E5E5EA] overflow-hidden bg-white shadow-sm animate-in fade-in duration-500">
