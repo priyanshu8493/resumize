@@ -24,7 +24,10 @@ export async function POST(req: NextRequest) {
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
       const content = await page.getTextContent();
-      const text = content.items.map((item: { str?: string }) => item.str ?? '').join(' ');
+      const text = content.items
+        .filter((item) => 'str' in item)
+        .map((item) => (item as { str: string }).str)
+        .join(' ');
       pages.push(text);
     }
 
